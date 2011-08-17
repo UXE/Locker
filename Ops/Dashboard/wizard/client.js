@@ -18,12 +18,14 @@ $(document).ready(
         var CountPoll = (
             function () {
                 var CountPoll = function (name) {
+                    console.log("Count poll made ("+name+")");
                     var t = this;
                     t.name = name;
                     t.lastCount = 0;
                     t.count = 0;
                     
                     t.handleResponse = function(data, err, resp) {
+                        console.log("got response");
                         t.lastCount = t.count;
                         t.count = data.count;
                         if (t.count != t.lastCount) {
@@ -48,7 +50,17 @@ $(document).ready(
                     };
 
                     t.query = function() {
-                        $.getJSON("/Me/"+t.name+"/state", {}, t.handleResponse);
+                        console.log("Query");
+                        var url = "/Me/"+t.name+"/state";
+                        $.ajax({
+                                   url: url,
+                                   dataType: 'json',
+                                   success: t.handleResponse,
+                                   error: function(e) {
+                                       // assume it will become available later
+                                       t.timeout = setTimeout(t.query, 3000);
+                                   }
+                               });
                     };
 
                     t.halt = function() {
@@ -56,6 +68,7 @@ $(document).ready(
                     };
                     
                     // init
+                    console.log("init");
                     t.query();
                     $("#"+t.name+"Count").odoTicker(
                         {
@@ -77,7 +90,8 @@ $(document).ready(
          */
         var SyncletPoll = (
             function () {
-                var SyncletPoll = function (handle) {
+                var SyncletPoll = function () {
+                    console.log("Synclet poll made");
                     var t = this;
                     t.uri = "/synclets";
 
@@ -121,33 +135,9 @@ $(document).ready(
                     };
 
                     t.query = function() {
-                        $.ajax({
-                                   url: t.uri,
-                                   dataType: 'json',
-                                   success: t.handleResponse,
-                                   error: function(e) {}
-                               });
-                    };
-
-                    t.handleResponse = function(data, err, resp) {
-                        t.ready = data.ready;
-                        
-                        if (data.ready > 0 && data.syncing > 0) {
-                            t.pending();
-                            // show counters
-                            $("#wizard-collections").slideDown();
-                            $("#wizard-actions").fadeIn();
-                            $("#popup h2").html(_s[1].action).next().html(_s[1].desc);
-                        }
-
-                        t.timeout = setTimeout(t.query, 1000);
-                    };
-
-                    t.query = function() {
-                        var url = t.uri + "state";
+                        var url = t.uri;
                         $.ajax({
                                    url: url,
->>>>>>> dfa8992011ca75e005a4d129d7501111f644afdd
                                    dataType: 'json',
                                    success: t.handleResponse,
                                    error: function(e) {
@@ -174,8 +164,8 @@ $(document).ready(
                     t.query();
                 };
                 
-                return function (name) {
-                    return new SyncletPoll(name);
+                return function () {
+                    return new SyncletPoll();
                 };
 
             })();
@@ -223,9 +213,9 @@ $(document).ready(
         
         $('#popup').live('pagecreate',function(event){
                              // collections
-                             var photoCountPoll = new CountPoll("photos");
-                             var linkCountPoll = new CountPoll("links");
-                             var contactCountPoll = new CountPoll("contacts");
+                             window.photoCountPoll = new CountPoll("photos");
+                             window.linkCountPoll = new CountPoll("links");
+                             window.contactCountPoll = new CountPoll("contacts");
                              
                              // synclets
                              window.syncletPoll = new SyncletPoll();
